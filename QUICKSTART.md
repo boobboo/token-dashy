@@ -27,7 +27,7 @@ TOKEN_DASHY_ENABLE_CANARY=false
 TOKEN_DASHY_ALERT_TOKEN_THRESHOLD=0.95
 TOKEN_DASHY_BACKEND_PORT=8010
 TOKEN_DASHY_FRONTEND_PORT=3010
-VITE_API_BASE_URL=http://<docker-host-ip-or-dns>:8010
+VITE_API_BASE_URL=
 TOKEN_DASHY_POLL_INTERVAL_SECONDS=300
 TOKEN_DASHY_POLL_DAYS=7
 ```
@@ -90,6 +90,10 @@ Open:
 
 - Dashboard: `http://<host>:3010`
 - Backend health: `http://<host>:8010/api/health`
+
+If `http://<host>:8010/` opens an API status page, that is normal. It is the backend, not the dashboard.
+
+In Docker Compose, leave `VITE_API_BASE_URL` blank. The frontend calls `/api/...` on port `3010`, and Vite proxies those requests to the backend container internally. This avoids browser-side `localhost` problems on remote hosts.
 
 The SQLite database is stored in the Docker volume `token-dashy_sqlite_data`.
 

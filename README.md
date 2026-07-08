@@ -35,6 +35,10 @@ Open:
 - Dashboard: http://localhost:3010
 - API health: http://localhost:8010/api/health
 
+The backend root at `http://localhost:8010/` returns API status. The dashboard is served by the frontend on port `3010`.
+
+For Docker Compose, leave `VITE_API_BASE_URL` blank so the frontend proxies `/api` to the backend container internally.
+
 By default the app seeds demo data if no usage records exist. Set `TOKEN_DASHY_SEED_DEMO_DATA=false` when you only want provider data.
 
 ## Provider keys

@@ -38,6 +38,18 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def root() -> dict:
+    return {
+        "app": "Token Dashy API",
+        "status": "ok",
+        "dashboard": "Open the frontend on the configured frontend port, usually http://<host>:3010",
+        "health": "/api/health",
+        "summary": "/api/analytics/summary",
+        "alerts": "/api/alerts",
+    }
+
+
 async def polling_loop() -> None:
     interval = int(os.getenv("TOKEN_DASHY_POLL_INTERVAL_SECONDS", "300"))
     await asyncio.to_thread(poll_all_metrics)

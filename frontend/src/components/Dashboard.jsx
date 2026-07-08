@@ -2,7 +2,7 @@ import { AlertTriangle, CircleDollarSign, Database, RefreshCw, Zap } from 'lucid
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import BurnChart from './BurnChart.jsx';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 function formatNumber(value) {
   return new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format(value || 0);
