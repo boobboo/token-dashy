@@ -25,6 +25,9 @@ ANTHROPIC_ADMIN_KEY=your_anthropic_admin_key
 TOKEN_DASHY_SEED_DEMO_DATA=false
 TOKEN_DASHY_ENABLE_CANARY=false
 TOKEN_DASHY_ALERT_TOKEN_THRESHOLD=0.95
+TOKEN_DASHY_BACKEND_PORT=8010
+TOKEN_DASHY_FRONTEND_PORT=3010
+VITE_API_BASE_URL=http://<docker-host-ip-or-dns>:8010
 TOKEN_DASHY_POLL_INTERVAL_SECONDS=300
 TOKEN_DASHY_POLL_DAYS=7
 ```
@@ -85,22 +88,22 @@ docker compose up --build -d
 
 Open:
 
-- Dashboard: `http://<host>:3000`
-- Backend health: `http://<host>:8000/api/health`
+- Dashboard: `http://<host>:3010`
+- Backend health: `http://<host>:8010/api/health`
 
 The SQLite database is stored in the Docker volume `token-dashy_sqlite_data`.
 
 ## 5. Check ingestion
 
 ```bash
-curl http://localhost:8000/api/health
-curl http://localhost:8000/api/analytics/summary
+curl http://localhost:8010/api/health
+curl http://localhost:8010/api/analytics/summary
 ```
 
 To trigger collection immediately:
 
 ```bash
-curl -X POST http://localhost:8000/api/collect
+curl -X POST http://localhost:8010/api/collect
 ```
 
 The normal poller runs every `TOKEN_DASHY_POLL_INTERVAL_SECONDS`.
@@ -108,8 +111,8 @@ The normal poller runs every `TOKEN_DASHY_POLL_INTERVAL_SECONDS`.
 To evaluate alerts immediately:
 
 ```bash
-curl -X POST http://localhost:8000/api/alerts/evaluate
-curl http://localhost:8000/api/alerts
+curl -X POST http://localhost:8010/api/alerts/evaluate
+curl http://localhost:8010/api/alerts
 ```
 
 ## 6. Back up or move the SQLite database
@@ -151,9 +154,9 @@ Frontend:
 ```bash
 cd frontend
 npm install
-export VITE_API_BASE_URL=http://<host>:8000
+export VITE_API_BASE_URL=http://<host>:8010
 npm run build
-npm run preview -- --host 0.0.0.0 --port 3000
+npm run preview -- --host 0.0.0.0 --port 3010
 ```
 
 For a persistent non-Docker host, put both processes behind systemd or your host supervisor.

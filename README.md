@@ -32,8 +32,8 @@ docker compose up --build
 
 Open:
 
-- Dashboard: http://localhost:3000
-- API health: http://localhost:8000/api/health
+- Dashboard: http://localhost:3010
+- API health: http://localhost:8010/api/health
 
 By default the app seeds demo data if no usage records exist. Set `TOKEN_DASHY_SEED_DEMO_DATA=false` when you only want provider data.
 
@@ -102,7 +102,7 @@ npm install
 npm run dev
 ```
 
-If the API is not on `http://localhost:8000`, set `VITE_API_BASE_URL`.
+If the API is not on `http://localhost:8010`, set `VITE_API_BASE_URL`.
 
 ## API
 
