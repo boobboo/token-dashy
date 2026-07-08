@@ -111,7 +111,10 @@ def get_summary() -> dict:
         cost_month = rows_to_dicts(
             conn.execute(
                 """
-                SELECT provider, SUM(amount) AS amount, currency
+                SELECT provider, SUM(amount) AS amount, currency,
+                       GROUP_CONCAT(DISTINCT source) AS sources,
+                       MIN(bucket_start) AS first_bucket,
+                       MAX(bucket_start) AS last_bucket
                 FROM cost_usage
                 WHERE datetime(bucket_start) >= datetime('now', 'start of month')
                 GROUP BY provider, currency
@@ -142,11 +145,38 @@ def get_summary() -> dict:
                 """
             ).fetchall()
         )
+        data_window = dict(
+            conn.execute(
+                """
+                SELECT MIN(bucket_start) AS first_usage,
+                       MAX(bucket_start) AS last_usage,
+                       GROUP_CONCAT(DISTINCT source) AS usage_sources,
+                       SUM(CASE WHEN source = 'demo_seed' THEN 1 ELSE 0 END) AS demo_rows,
+                       COUNT(*) AS usage_rows
+                FROM token_usage
+                """
+            ).fetchone()
+        )
+        cost_window = dict(
+            conn.execute(
+                """
+                SELECT MIN(bucket_start) AS first_cost,
+                       MAX(bucket_start) AS last_cost,
+                       GROUP_CONCAT(DISTINCT source) AS cost_sources,
+                       SUM(CASE WHEN source = 'demo_seed' THEN 1 ELSE 0 END) AS demo_rows,
+                       COUNT(*) AS cost_rows
+                FROM cost_usage
+                WHERE datetime(bucket_start) >= datetime('now', 'start of month')
+                """
+            ).fetchone()
+        )
         active_alerts = get_active_alerts()
     return {
         "rate_limits": rate_limits,
         "burn_24h": burn_24h,
         "cost_month": cost_month,
+        "data_window": data_window,
+        "cost_window": cost_window,
         "totals": dict(totals),
         "collector_runs": collector_runs,
         "active_alerts": active_alerts,
@@ -210,31 +240,52 @@ def get_trends(
 
 
 @app.get("/api/analytics/projects")
-def get_projects() -> dict:
+def get_projects(
+    days: Annotated[int, Query(ge=1, le=90)] = 7,
+    provider: str | None = None,
+    project: str | None = None,
+) -> dict:
+    filters = ["datetime(bucket_start) >= datetime('now', ?)"]
+    params: list[object] = [f"-{days} days"]
+    if provider and provider != "all":
+        filters.append("provider = ?")
+        params.append(provider)
+    if project and project != "all":
+        filters.append("COALESCE(project_id, 'unassigned') = ?")
+        params.append(project)
+    where_clause = " AND ".join(filters)
+
     with get_conn() as conn:
         providers = rows_to_dicts(
             conn.execute("SELECT DISTINCT provider FROM token_usage ORDER BY provider").fetchall()
         )
         projects = rows_to_dicts(
             conn.execute(
-                """
+                f"""
                 SELECT provider, COALESCE(project_id, 'unassigned') AS project_id,
                        SUM(total_tokens) AS total_tokens,
-                       SUM(request_count) AS request_count
+                       SUM(request_count) AS request_count,
+                       MIN(bucket_start) AS first_seen,
+                       MAX(bucket_start) AS last_seen,
+                       GROUP_CONCAT(DISTINCT source) AS sources
                 FROM token_usage
+                WHERE {where_clause}
                 GROUP BY provider, COALESCE(project_id, 'unassigned')
                 ORDER BY total_tokens DESC
-                """
+                """,
+                params,
             ).fetchall()
         )
         models = rows_to_dicts(
             conn.execute(
-                """
+                f"""
                 SELECT provider, model, SUM(total_tokens) AS total_tokens
                 FROM token_usage
+                WHERE {where_clause}
                 GROUP BY provider, model
                 ORDER BY total_tokens DESC
-                """
+                """,
+                params,
             ).fetchall()
         )
-    return {"providers": providers, "projects": projects, "models": models}
+    return {"providers": providers, "projects": projects, "models": models, "window": {"days": days}}

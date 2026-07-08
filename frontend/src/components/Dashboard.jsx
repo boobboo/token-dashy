@@ -30,9 +30,33 @@ function pivotTrendRows(rows) {
   });
 
   return {
-    chartData: Array.from(buckets.values()),
+    chartData: toCumulativeRows(Array.from(buckets.values()), Array.from(series).sort()),
     series: Array.from(series).sort(),
   };
+}
+
+function toCumulativeRows(rows, series) {
+  const totals = Object.fromEntries(series.map((name) => [name, 0]));
+  return rows.map((row) => {
+    const next = { time_bucket: row.time_bucket };
+    series.forEach((name) => {
+      totals[name] += row[name] || 0;
+      next[name] = totals[name];
+    });
+    return next;
+  });
+}
+
+function formatDateTime(value) {
+  if (!value) return 'No data';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }
 
 function StatCard({ icon: Icon, label, value, detail }) {
@@ -46,6 +70,28 @@ function StatCard({ icon: Icon, label, value, detail }) {
         <strong>{value}</strong>
         {detail ? <span>{detail}</span> : null}
       </div>
+    </div>
+  );
+}
+
+function DataBanner({ summary }) {
+  const sources = summary?.data_window?.usage_sources || '';
+  const hasDemo = (summary?.data_window?.demo_rows || 0) > 0;
+  if (!summary?.data_window?.usage_rows) {
+    return (
+      <div className="data-banner">
+        No usage rows yet. Add provider admin keys or keep demo seeding enabled for a synthetic preview.
+      </div>
+    );
+  }
+  return (
+    <div className={hasDemo ? 'data-banner warning' : 'data-banner'}>
+      <strong>{hasDemo ? 'Demo data active' : 'Live usage data'}</strong>
+      <span>
+        {formatDateTime(summary.data_window.first_usage)} to {formatDateTime(summary.data_window.last_usage)}
+        {' '}from {sources || 'unknown source'}.
+      </span>
+      {hasDemo ? <span> sap-btp, riverdale, and mycroft are synthetic seed projects until demo data is purged from SQLite.</span> : null}
     </div>
   );
 }
@@ -153,9 +199,14 @@ export default function Dashboard() {
         provider: filters.provider,
         project: filters.project,
       });
+      const projectParams = new URLSearchParams({
+        days: String(filters.days),
+        provider: filters.provider,
+        project: filters.project,
+      });
       const [summaryRes, metadataRes, trendsRes] = await Promise.all([
         fetch(`${API_BASE}/api/analytics/summary`),
-        fetch(`${API_BASE}/api/analytics/projects`),
+        fetch(`${API_BASE}/api/analytics/projects?${projectParams}`),
         fetch(`${API_BASE}/api/analytics/trends?${trendParams}`),
       ]);
       if (!summaryRes.ok || !metadataRes.ok || !trendsRes.ok) {
@@ -188,6 +239,10 @@ export default function Dashboard() {
     () => (summary?.cost_month || []).reduce((total, row) => total + (row.amount || 0), 0),
     [summary]
   );
+  const costSources = useMemo(
+    () => Array.from(new Set((summary?.cost_month || []).flatMap((row) => (row.sources || '').split(',').filter(Boolean)))),
+    [summary]
+  );
   const activeAlerts = summary?.active_alerts || [];
 
   const providerOptions = metadata.providers.map((item) => item.provider);
@@ -208,10 +263,16 @@ export default function Dashboard() {
       </header>
 
       {error ? <div className="error-banner">{error}</div> : null}
+      <DataBanner summary={summary} />
 
       <section className="stats-grid" aria-label="Dashboard metrics">
         <StatCard icon={Zap} label="24h token burn" value={formatCompact(tokens24h)} detail={`${formatNumber(requests24h)} requests`} />
-        <StatCard icon={CircleDollarSign} label="Month cost" value={formatCurrency(monthlyCost)} detail="provider cost APIs" />
+        <StatCard
+          icon={CircleDollarSign}
+          label="Month cost"
+          value={formatCurrency(monthlyCost)}
+          detail={costSources.length ? `current month: ${costSources.join(', ')}` : 'current-month provider cost APIs'}
+        />
         <StatCard
           icon={Database}
           label="Tracked projects"
@@ -277,7 +338,10 @@ export default function Dashboard() {
         <div className="section-heading">
           <div>
             <h2>Project burn</h2>
-            <p>Projects map to OpenAI project IDs/API keys or Anthropic workspaces.</p>
+            <p>
+              Selected window: last {metadata.window?.days || filters.days} day{(metadata.window?.days || filters.days) === 1 ? '' : 's'}.
+              Projects map to OpenAI project IDs/API keys or Anthropic workspaces.
+            </p>
           </div>
         </div>
         <div className="table-wrap">
@@ -288,6 +352,8 @@ export default function Dashboard() {
                 <th>Project</th>
                 <th>Tokens</th>
                 <th>Requests</th>
+                <th>Last seen</th>
+                <th>Source</th>
               </tr>
             </thead>
             <tbody>
@@ -297,6 +363,8 @@ export default function Dashboard() {
                   <td>{project.project_id}</td>
                   <td>{formatNumber(project.total_tokens)}</td>
                   <td>{formatNumber(project.request_count)}</td>
+                  <td>{formatDateTime(project.last_seen)}</td>
+                  <td>{project.sources || 'unknown'}</td>
                 </tr>
               ))}
             </tbody>

@@ -32,7 +32,7 @@ export default function BurnChart({ data, series }) {
       <div className="section-heading">
         <div>
           <h2>Token burn</h2>
-          <p>Stacked hourly consumption for the selected window.</p>
+          <p>Cumulative token burn for the selected window.</p>
         </div>
       </div>
       <div className="chart-frame">

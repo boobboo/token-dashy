@@ -324,6 +324,7 @@ td {
 }
 
 .error-banner,
+.data-banner,
 .loading {
   padding: 12px 14px;
   margin-bottom: 14px;
@@ -333,6 +334,31 @@ td {
   border-color: #fecaca;
   background: #fff1f2;
   color: #9f1239;
+}
+
+.data-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid #dce3e8;
+  border-radius: 8px;
+  background: #f8fbfc;
+  color: #526170;
+}
+
+.data-banner strong {
+  color: #0f172a;
+}
+
+.data-banner.warning {
+  border-color: #facc15;
+  background: #fffbeb;
+  color: #854d0e;
+}
+
+.data-banner.warning strong {
+  color: #713f12;
 }
 
 .loading {

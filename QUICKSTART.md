@@ -119,6 +119,20 @@ curl -X POST http://localhost:8010/api/alerts/evaluate
 curl http://localhost:8010/api/alerts
 ```
 
+If demo data was previously seeded, setting `TOKEN_DASHY_SEED_DEMO_DATA=false` will not remove existing SQLite rows. To purge only demo rows:
+
+```bash
+sudo docker-compose exec backend python -c "import sqlite3; conn=sqlite3.connect('/data/token_dashy.db'); [conn.execute(sql) for sql in (\"DELETE FROM token_usage WHERE source='demo_seed'\", \"DELETE FROM cost_usage WHERE source='demo_seed'\", \"DELETE FROM rate_limits WHERE source='demo_seed'\", \"DELETE FROM alert_events\")]; conn.commit(); conn.close()"
+```
+
+Or, if you want to wipe the whole Token Dashy database:
+
+```bash
+sudo docker-compose down
+sudo docker volume rm token-dashy_sqlite_data
+sudo docker-compose up --build -d
+```
+
 ## 6. Back up or move the SQLite database
 
 If running via Docker:

@@ -41,6 +41,8 @@ For Docker Compose, leave `VITE_API_BASE_URL` blank so the frontend proxies `/ap
 
 By default the app seeds demo data if no usage records exist. Set `TOKEN_DASHY_SEED_DEMO_DATA=false` when you only want provider data.
 
+Existing demo rows live in SQLite. If demo data was seeded before you disabled it, purge the `demo_seed` rows or recreate the Docker volume.
+
 ## Provider keys
 
 Set these in `.env`:
